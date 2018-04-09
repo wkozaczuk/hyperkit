@@ -272,6 +272,7 @@ multiboot_find_header(struct multiboot_state *s, struct image *img)
 	uintptr_t end = ptr + sz - sizeof(struct multiboot_header);
 	int found = 0;
 
+	fprintf(stdout, "multiboot: header size: %lu (%#010lx)\n", sizeof(struct multiboot_header), sizeof(struct multiboot_header));
 	for (; ptr < end; ptr += 4) {
 		header = (struct multiboot_header *)ptr;
 
@@ -286,16 +287,19 @@ multiboot_find_header(struct multiboot_state *s, struct image *img)
 	if (!found)
 		die("multiboot: failed to find multiboot header in '%s'\n", config.kernel_path);
 
+	fprintf(stdout, "multiboot: FOUND multiboot header!!!\n");
 	// are there any mandatory flags that we don't support? (any other than 0 and 1 set)
 	uint16_t supported_mandatory = ((1 << 1) | (1 << 0));
 	if (((header->hdr.flags & ~supported_mandatory) & 0xFFFF) != 0x0)
 		die("multiboot: header has unsupported mandatory flags (0x%x), bailing.\n", header->hdr.flags & 0xFFFF);
 
+   fprintf(stdout, "multiboot: before multiboot_parse_elf()\n");
 	if (!(header->hdr.flags & (1 << 16))) {
 		multiboot_parse_elf(s, img);
 		return;
 	}
 
+	fprintf(stdout, "multiboot: skipped multiboot_parse_elf()\n");
 	s->kernel_offset = (uint32_t)((uintptr_t)header - (uintptr_t)img->mapping -
 		(header->lhdr.header_addr - header->lhdr.load_addr));
 	if (header->lhdr.load_end_addr) {
@@ -330,6 +334,7 @@ multiboot_load_data(struct multiboot_state *s, void *from, uint32_t size, unsign
 			((s->load_addr + size) > s->guest_mem_size))
 		die("multiboot: %x+%x is beyond guest's memory\n", s->load_addr, size);
 
+	fprintf(stdout, "multiboot: copying %d bytes from: %#016lx to: %#016x\n", size, (uintptr_t)from, s->load_addr);
 	memcpy((void *)to, from, size);
 
 	s->load_addr = s->load_addr + size;
@@ -348,6 +353,7 @@ multiboot_set_guest_state(struct multiboot_state *s)
 	xh_vm_set_register(0, VM_REG_GUEST_RAX, 0x2BADB002);
 	xh_vm_set_register(0, VM_REG_GUEST_RBX, s->mbi_addr);
 	xh_vm_set_register(0, VM_REG_GUEST_RIP, s->kernel_entry_addr);
+	//xh_vm_set_register(0, VM_REG_GUEST_RSP, 0x7c00);
 
 	xh_vm_set_desc(0, VM_REG_GUEST_CS, 0, 0xffffffff, 0xc09b);
 	xh_vm_set_desc(0, VM_REG_GUEST_DS, 0, 0xffffffff, 0xc093);
@@ -435,10 +441,15 @@ multiboot(void)
 	get_image(config.kernel_path, &img);
 	multiboot_find_header(&state, &img);
 	state.load_addr = state.kernel_load_addr;
+   fprintf(stdout, "multiboot: found header with info: at offset: %#016x, load address: %#016x, size: %d\n", 
+		state.kernel_offset, state.kernel_load_addr, state.kernel_size);
 
 	// actually load the image into the guest's memory
 	multiboot_load_data(&state, (void *)((uintptr_t)img.mapping + state.kernel_offset), state.kernel_size, PAGE_SIZE);
+	//multiboot_load_data(&state, (void *)((uintptr_t)img.mapping + 0x60), state.kernel_size, PAGE_SIZE);
+	//multiboot_load_data(&state, (void *)((uintptr_t)img.mapping + 0x0), 6619136, PAGE_SIZE);
 	put_image(&img);
+	fprintf(stdout, "multiboot: loaded image in memory\n");
 
 	// prepare memory for modules info
 	state.modules_count = multiboot_count_modules();
@@ -461,6 +472,7 @@ multiboot(void)
 	for (i = 0; i < state.modules_count; i++)
 		state.modules[i].cmdline += state.load_addr;
 	multiboot_load_data(&state, state.cmdline, state.cmdline_len, 4);
+	fprintf(stdout, "multiboot: processed %d modules\n", state.modules_count);
 
 	// finally load MBI header
 	state.mbi_addr = state.load_addr;
@@ -471,8 +483,15 @@ multiboot(void)
 	state.mbi.mods_addr = state.mbi_addr + sizeof(state.mbi);
 	multiboot_load_data(&state, &state.mbi, sizeof(state.mbi), 0);
 	multiboot_load_data(&state, state.modules, sizeof(*state.modules) * state.modules_count, 0);
+	fprintf(stdout, "multiboot: loaded MBI header, memory lower: %#08x, memory upper: %#08x\n", 
+		state.mbi.mem_lower, state.mbi.mem_upper);
 
 	free(state.modules);
 	free(state.cmdline);
-	return multiboot_set_guest_state(&state);
+
+	uint64_t ret = multiboot_set_guest_state(&state);
+	fprintf(stdout, "multiboot: setup complete:  %llu (%#016llx)!!!\n", ret, ret);
+	//die("Smok!!!\n");
+	return ret;
+	//return multiboot_set_guest_state(&state);
 }

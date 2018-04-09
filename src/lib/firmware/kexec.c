@@ -74,6 +74,7 @@ kexec_load_kernel(char *path, char *cmdline) {
 	memset(((void *) ((uintptr_t) zp)), 0, sizeof(struct zero_page));
 
 	if (!(f = fopen(path, "r"))) {
+		fprintf(stderr, "kexec: failed to open file %s\n", path);
 		return -1;
 	}
 
@@ -81,15 +82,20 @@ kexec_load_kernel(char *path, char *cmdline) {
 	sz = (size_t) ftell(f);
 
 	if (sz < (0x01f1 + sizeof(struct setup_header))) {
+		fprintf(stderr, "kexec: wrong size\n");
 		fclose(f);
 		return -1;
 	}
+	fprintf(stdout, "kexec: setup header is supposed to start at: %d (%#010x)\n", 0x01f1, 0x01f1);
+	fprintf(stdout, "kexec: size of setup_header: %lu (%#010lx)\n", 
+		sizeof(struct setup_header), sizeof(struct setup_header));
 
 	fseek(f, 0x01f1, SEEK_SET);
 
 	if (!fread(((void *) ((uintptr_t) &zp->setup_header)), 1,
 		sizeof(zp->setup_header), f))
 	{
+		fprintf(stderr, "kexec: failed to read setup header\n");
 		fclose(f);
 		return -1;
 	}
@@ -103,6 +109,7 @@ kexec_load_kernel(char *path, char *cmdline) {
 		(zp->setup_header.syssize * 16))))        /* too small */
 	{
 		/* we can't boot this kernel */
+		fprintf(stderr, "kexec: wrong kernel!!!\n");
 		fclose(f);
 		return -1;
 	}
@@ -113,6 +120,11 @@ kexec_load_kernel(char *path, char *cmdline) {
 	kernel_start = (zp->setup_header.relocatable_kernel) ?
 		ALIGNUP(BASE_KERNEL, zp->setup_header.kernel_alignment) :
 		zp->setup_header.pref_address;
+
+	fprintf(stdout, "kexec: kernel offset: %llu (%#010llx)\n", kernel_offset, kernel_offset);
+	fprintf(stdout, "kexec: kernel size: %llu (%#010llx)\n", kernel_size, kernel_size);
+	fprintf(stdout, "kexec: kernel init size: %llu (%#010llx)\n", kernel_init_size, kernel_init_size);
+	fprintf(stdout, "kexec: kernel start: %llu (%#010llx)\n", kernel_start, kernel_start);
 
 	if ((kernel_start < BASE_KERNEL) ||
 		 (kernel_size > kernel_init_size) || /* XXX: always true? */
@@ -128,6 +140,8 @@ kexec_load_kernel(char *path, char *cmdline) {
 		fclose(f);
 		return -1;
 	}
+	fprintf(stdout, "kexec: copied %llu bytes from offet %llu in file to memory at start: %llu\n", 
+		kernel_size, kernel_offset, kernel_start);
 
 	fclose(f);
 
@@ -286,5 +300,6 @@ kexec(void)
 	xh_vm_set_register(0, VM_REG_GUEST_RSI, BASE_ZEROPAGE);
 	xh_vm_set_register(0, VM_REG_GUEST_RIP, kernel.base);
 
+	fprintf(stdout, "kexec: setup complete!!!\n");
 	return kernel.base;
 }

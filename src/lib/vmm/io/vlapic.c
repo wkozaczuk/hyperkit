@@ -1530,7 +1530,7 @@ vlapic_cleanup(struct vlapic *vlapic)
 uint64_t
 vlapic_get_apicbase(struct vlapic *vlapic)
 {
-
+	fprintf(stdout, "vlapic_get_apicbase: msr_apicbase: 0x%llx\n", vlapic->msr_apicbase );
 	return (vlapic->msr_apicbase);
 }
 
@@ -1539,6 +1539,7 @@ vlapic_set_apicbase(struct vlapic *vlapic, uint64_t new)
 {
 
 	if (vlapic->msr_apicbase != new) {
+		fprintf(stdout, "vlapic_set_apicbase: msr_apicbase: 0x%llx vs new: 0x%llx\n", vlapic->msr_apicbase, new);
 		VLAPIC_CTR2(vlapic, "Changing APIC_BASE MSR from %#llx to %#llx "
 		    "not supported", vlapic->msr_apicbase, new);
 		return (-1);
@@ -1605,6 +1606,7 @@ vlapic_deliver_intr(struct vm *vm, bool level, uint32_t dest, bool phys,
 	 */
 	vlapic_calcdest(vm, &dmask, dest, phys, lowprio, false);
 
+   fprintf(stderr, "vlapic_deliver_intr: BEFORE loop\n");
 	while ((vcpuid = CPU_FFS(&dmask)) != 0) {
 		vcpuid--;
 		CPU_CLR(((unsigned) vcpuid), &dmask);
@@ -1614,6 +1616,7 @@ vlapic_deliver_intr(struct vm *vm, bool level, uint32_t dest, bool phys,
 			lapic_set_intr(vm, vcpuid, vec, level);
 		}
 	}
+	fprintf(stderr, "vlapic_deliver_intr: AFTER loop\n");
 }
 
 void

@@ -265,7 +265,9 @@ vcpu_thread(void *param)
 
 	if (vcpu == BSP) {
 		rip_entry = fw_func();
+		fprintf(stdout, "Protected mode\n");
 	} else {
+		fprintf(stdout, "Real mode\n");
 		rip_entry = vmexit[vcpu].rip;
 		spinup_ap_realmode(vcpu, &rip_entry);
 	}
@@ -273,6 +275,7 @@ vcpu_thread(void *param)
 	vmexit[vcpu].rip = rip_entry;
 	vmexit[vcpu].inst_length = 0;
 
+	fprintf(stdout, "About to vcpu_loop --->\n");
 	vcpu_loop(vcpu, vmexit[vcpu].rip);
 
 	/* not reached */

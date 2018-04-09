@@ -1692,12 +1692,14 @@ emulate_wrmsr(struct vmx *vmx, int vcpuid, u_int num, uint64_t val, bool *retu)
 {
 	int error;
 
+	fprintf(stdout, "emulate_wrmsr: num=0x%x, val=0x%llx, is_lapic: %d\n", num, val, lapic_msr(num));
 	HYPERKIT_VMX_WRITE_MSR(vcpuid, num, val);
 	if (lapic_msr(num))
 		error = lapic_wrmsr(vmx->vm, vcpuid, num, val, retu);
 	else
 		error = vmx_wrmsr(vmx, vcpuid, num, val);
 
+	fprintf(stdout, "emulate_wrmsr: error: %d\n", error );
 	return (error);
 }
 

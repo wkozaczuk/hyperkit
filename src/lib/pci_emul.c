@@ -1468,6 +1468,7 @@ pci_generate_msix(struct pci_devinst *pi, int index)
 	mte = &pi->pi_msix.table[index];
 	if ((mte->vector_control & PCIM_MSIX_VCTRL_MASK) == 0) {
 		/* XXX Set PBA bit if interrupt is disabled */
+		fprintf(stderr, "pci_generate_msix: index %d\n", index);
 		xh_vm_lapic_msi(mte->addr, mte->msg_data);
 	}
 }

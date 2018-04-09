@@ -48,6 +48,7 @@
 int
 lapic_set_intr(struct vm *vm, int cpu, int vector, bool level)
 {
+	fprintf(stderr, "lapic_set_intr ENTRY: cpu: %d, vector: %d\n", cpu, vector);
 	struct vlapic *vlapic;
 
 	if (cpu < 0 || cpu >= VM_MAXCPU)
@@ -63,6 +64,7 @@ lapic_set_intr(struct vm *vm, int cpu, int vector, bool level)
 	vlapic = vm_lapic(vm, cpu);
 	if (vlapic_set_intr_ready(vlapic, vector, level))
 		vcpu_notify_event(vm, cpu, true);
+	fprintf(stderr, "lapic_set_intr EXIT: cpu: %d, vector: %d\n", cpu, vector);	
 	return (0);
 }
 
@@ -127,6 +129,7 @@ lapic_intr_msi(struct vm *vm, uint64_t addr, uint64_t msg)
 	VM_CTR3(vm, "lapic MSI %s dest %#x, vec %d",
 	    phys ? "physical" : "logical", dest, vec);
 
+   fprintf(stderr, "lapic_intr_msi: about to deliver\n");
 	vlapic_deliver_intr(vm, LAPIC_TRIG_EDGE, dest, phys, delmode, vec);
 	return (0);
 }
@@ -186,6 +189,7 @@ lapic_wrmsr(struct vm *vm, int cpu, u_int msr, uint64_t val, bool *retu)
 
 	vlapic = vm_lapic(vm, cpu);
 
+	fprintf(stdout, "lapic_wrmsr: is MSR_APICBASE: %d\n", msr == MSR_APICBASE);
 	if (msr == MSR_APICBASE) {
 		error = vlapic_set_apicbase(vlapic, val);
 	} else {

@@ -92,13 +92,13 @@ uint64_t bootrom_load(void)
 	 * MMIO space (e.g. APIC, HPET, MSI).
 	 */
 	if (sbuf.st_size > MAX_BOOTROM_SIZE || sbuf.st_size < XHYVE_PAGE_SIZE) {
-		fprintf(stderr, "Invalid bootrom size %zd\n", sbuf.st_size);
+		//fprintf(stderr, "Invalid bootrom size %zd\n", sbuf.st_size);
 		goto done;
 	}
 
 	if (sbuf.st_size & XHYVE_PAGE_MASK) {
-		fprintf(stderr, "Bootrom size %zd is not a multiple of the "
-		    "page size\n", sbuf.st_size);
+		//fprintf(stderr, "Bootrom size %zd is not a multiple of the "
+		//    "page size\n", sbuf.st_size);
 		goto done;
 	}
 
@@ -107,9 +107,9 @@ uint64_t bootrom_load(void)
 	/* XXX Mapping cold be R/O to guest */
 	ptr = vmm_mem_alloc(gpa, (size_t)sbuf.st_size);
 	if (!ptr) {
-		fprintf(stderr,
-			"Failed to allocate %zd bytes of memory for bootrom\n",
-			sbuf.st_size);
+		//fprintf(stderr,
+		//	"Failed to allocate %zd bytes of memory for bootrom\n",
+		//	sbuf.st_size);
 		rv = -1;
 		goto done;
 	}

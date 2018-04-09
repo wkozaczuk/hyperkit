@@ -444,10 +444,13 @@ vq_has_descs(struct vqueue_info *vq)
  */
 static inline void
 vq_interrupt(struct virtio_softc *vs, struct vqueue_info *vq)
-{
-	if (pci_msix_enabled(vs->vs_pi))
+{	
+	if (pci_msix_enabled(vs->vs_pi)) {
+		fprintf(stderr, "vq_interrupt: MSIX vs_pi name %s\n", vs->vs_pi->pi_name);
 		pci_generate_msix(vs->vs_pi, vq->vq_msix_idx);
+	}	
 	else {
+		fprintf(stderr, "vq_interrupt: MSI vs_pi name %s\n", vs->vs_pi->pi_name);
 		VS_LOCK(vs);
 		vs->vs_isr |= VTCFG_ISR_QUEUES;
 		pci_generate_msi(vs->vs_pi, 0);
